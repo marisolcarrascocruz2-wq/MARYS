@@ -3,84 +3,288 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Escolar y Asistencia QR</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Escáner QR con Historial</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #1e293b;
+        }
+
+        /* Zona del Escáner */
+        #reader {
+            width: 100%;
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        /* Botones */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            display: none; /* Se muestra solo cuando la cámara está activa */
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        /* Sección de Historial */
+        .history-section {
+            margin-top: 25px;
+            text-align: left;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 8px;
+        }
+
+        .history-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .clear-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-decoration: underline;
+        }
+
+        .clear-btn:hover {
+            color: #64748b;
+        }
+
+        .history-list {
+            list-style: none;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #2563eb;
+            font-size: 0.9rem;
+        }
+
+        .item-data {
+            font-weight: 600;
+            color: #1e293b;
+            word-break: break-all;
+            margin-bottom: 4px;
+        }
+
+        .item-timestamp {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            padding: 20px 0;
+        }
+    </style>
+
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen text-gray-800">
+<body>
 
-    <nav class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-50">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-wide">🏫 Sistema de Gestión Estudiantil</h1>
-            <button onclick="exportarBackup()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg font-semibold text-sm transition shadow">
-                💾 Exportar Backup (.js)
-            </button>
-        </div>
-    </nav>
-
-    <main class="container mx-auto p-4 md:p-6 space-y-8">
+    <div class="container">
+        <h1>📷 Escáner QR Inteligente</h1>
         
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 lg:col-span-1">
-                <h2 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
-                    📷 Escáner de Asistencia QR
-                </h2>
-                <div id="reader" class="w-full bg-gray-50 rounded-lg overflow-hidden border border-dashed border-gray-300"></div>
-                <div class="mt-4 flex gap-2">
-                    <button onclick="encenderCamara()" class="flex-1 bg-blue-500 text-white py-2 rounded-lg font-medium text-sm hover:bg-blue-600 transition">
-                        Iniciar Cámara
-                    </button>
-                    <button onclick="detenerCamara()" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-medium text-sm hover:bg-red-600 transition">
-                        Detener
-                    </button>
-                </div>
-            </div>
+        <div id="reader"></div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 lg:col-span-2">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold text-gray-700">📅 Control de Asistencia Diario</h2>
-                    <input type="date" id="fechaAsistencia" class="border rounded-lg p-2 text-sm bg-gray-50" onchange="renderAsistencias()">
-                </div>
-                <div class="overflow-x-auto max-h-64">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b bg-gray-50 text-xs font-semibold text-gray-600 uppercase">
-                                <th class="p-3">Estudiante</th>
-                                <th class="p-3 text-center">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaAsistencias" class="divide-y text-sm">
-                            </tbody>
-                    </table>
-                </div>
+        <button id="btn-start" class="btn btn-primary" onclick="iniciarEscaneo()">Activar Cámara</button>
+        <button id="btn-stop" class="btn btn-danger" onclick="detenerEscaneo()">Detener Cámara</button>
+
+        <div class="history-section">
+            <div class="history-header">
+                <span class="history-title">Registros Escaneados</span>
+                <button class="clear-btn" onclick="limpiarHistorial()">Borrar todo</button>
             </div>
+            <ul id="history-list" class="history-list">
+                </ul>
         </div>
+    </div>
 
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-800">👥 Padrón de Estudiantes</h2>
-                    <p class="text-xs text-gray-500">Registrar, editar, eliminar o generar códigos QR.</p>
-                </div>
-                <button onclick="modalAgregarEstudiante()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 shadow-sm">
-                    ➕ Nuevo Estudiante
-                </button>
-            </div>
+    <script>
+        let html5QrCode;
+        let registros = JSON.parse(localStorage.getItem('qr_history')) || [];
 
-            <div class="overflow-x-auto rounded-xl border border-gray-200">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-50 border-b text-xs font-bold text-gray-600 uppercase tracking-wider">
-                            <th class="p-4">DNI</th>
-                            <th class="p-4">Nombres y Apellidos</th>
-                            <th class="p-4">Género</th>
-                            <th class="p-4">Edad</th>
-                            <th class="p-4">Celular</th>
-                            <th class="p-4 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaEstudiantes" class="divide-y divide-gray-200 text-sm">
-                        </tbody>
-                </table>
-            </div>
+        // Inicializar mostrando los registros guardados previamente
+        window.onload = () => {
+            actualizarInterfazHistorial();
+        };
+
+        function iniciarEscaneo() {
+            // Instanciar el escáner en el contenedor "reader"
+            html5QrCode = new Html5Qrcode("reader");
+            
+            const config = { 
+                fps: 10,                 // Cuadros por segundo a procesar
+                qrbox: { width: 250, height: 250 } // Área de enfoque del QR
+            };
+
+            // Ajustes visuales de botones
+            document.getElementById('btn-start').style.display = 'none';
+            document.getElementById('btn-stop').style.display = 'block';
+
+            // Iniciar la cámara apuntando por defecto a la cámara trasera ('environment')
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config,
+                (decodedText) => {
+                    // Acción al reconocer un código QR con éxito
+                    registrarCodigo(decodedText);
+                    detenerEscaneo(); // Detiene la cámara tras la lectura (opcional)
+                },
+                (errorMessage) => {
+                    // Error de escaneo continuo (silenciado para evitar saturar la consola)
+                }
+            ).catch((err) => {
+                console.error("Error al iniciar cámara: ", err);
+                alert("No se pudo acceder a la cámara. Asegúrate de otorgar los permisos necesarios y navegar bajo un entorno HTTPS.");
+                restablecerBotones();
+            });
+        }
+
+        function detenerEscaneo() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('reader').innerHTML = ''; // Limpia el contenedor
+                    restablecerBotones();
+                }).catch((err) => {
+                    console.error("Error al detener la cámara: ", err);
+                });
+            }
+        }
+
+        function restablecerBotones() {
+            document.getElementById('btn-start').style.style.display = 'block';
+            document.getElementById('btn-stop').style.display = 'none';
+        }
+
+        function registrarCodigo(contenido) {
+            // Capturar la fecha y hora exacta del momento de lectura
+            const ahora = new Date();
+            const fechaHoraString = ahora.toLocaleDateString() + ' - ' + ahora.toLocaleTimeString();
+
+            const nuevoRegistro = {
+                texto: contenido,
+                timestamp: fechaHoraString
+            };
+
+            // Añadir al inicio del arreglo para mostrar primero lo más reciente
+            registros.unshift(nuevoRegistro);
+
+            // Guardar permanentemente en el almacenamiento local del navegador (LocalStorage)
+            localStorage.setItem('qr_history', JSON.stringify(registros));
+
+            // Alerta sonora visual nativa antes de actualizar
+            actualizarInterfazHistorial();
+            
+            // Un pequeño aviso en pantalla
+            alert(`¡Código detectado con éxito!\n\nContenido: ${contenido}`);
+        }
+
+        function actualizarInterfazHistorial() {
+            const listaUI = document.getElementById('history-list');
+            listaUI.innerHTML = '';
+
+            if (registros.length === 0) {
+                listaUI.innerHTML = '<li class="empty-state">No hay códigos registrados todavía.</li>';
+                return;
+            }
+
+            registros.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                li.innerHTML = `
+                    <div class="item-data">${filtrarHTML(item.texto)}</div>
+                    <div class="item-timestamp">📅 ${item.timestamp}</div>
+                `;
+                listaUI.appendChild(li);
+            });
+        }
+
+        function limpiarHistorial() {
+            if (confirm("¿Estás seguro de que deseas borrar todo el historial acumulado?")) {
+                registros = [];
+                localStorage.removeItem('qr_history');
+                actualizarInterfazHistorial();
+            }
+        }
+
+        // Función de seguridad básica para evitar problemas si el QR lee código HTML malicioso
+        function filtrarHTML(cadena) {
+            const temporal = document.createElement('div');
+            temporal.innerText = cadena;
+            return temporal.innerHTML;
+        }
+    </script>
+</body>
+</html>
